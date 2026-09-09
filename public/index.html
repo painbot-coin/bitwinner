@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BitWinner - Crypto Racing</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🏁</span>
+        <span class="logo-text">BitWinner</span>
+      </div>
+      
+      <!-- Auth Section (Not Logged In) -->
+      <div class="auth-buttons" id="authButtons">
+        <button class="btn btn-outline" onclick="openModal('signinModal')">Sign In</button>
+        <button class="btn btn-primary" onclick="openModal('signupModal')">Sign Up</button>
+      </div>
+      
+      <!-- User Section (Logged In) -->
+      <div class="user-section" id="userSection" style="display: none;">
+        <div class="wallet-balance" onclick="openModal('depositModal')">
+          <span class="crypto-icon">₮</span>
+          <span id="balance">0.00</span>
+          <span class="currency">USDT</span>
+        </div>
+        <div class="user-menu">
+          <button class="user-btn" onclick="toggleUserDropdown()">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <span class="username" id="username">User</span>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
+              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            </svg>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <a href="#" onclick="openModal('profileModal'); toggleUserDropdown();">
+              <span>👤</span> Profile
+            </a>
+            <a href="#" onclick="openModal('transactionsModal'); toggleUserDropdown();">
+              <span>📜</span> Transactions
+            </a>
+            <a href="#" onclick="openModal('depositModal'); toggleUserDropdown();">
+              <span>💰</span> Deposit
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="signOut()" class="danger">
+              <span>🚪</span> Sign Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="game-container">
+      <!-- Game Area (Race Track + History) -->
+      <div class="game-area">
+        <!-- Race Section -->
+        <div class="race-section">
+          <div class="race-header">
+            <div class="race-info">
+              <span class="race-label">Race</span>
+              <span class="race-id" id="raceId">#000001</span>
+            </div>
+            <div class="timer-container">
+              <div class="timer" id="timer">
+                <span class="timer-value">10.0</span>
+                <span class="timer-label">s</span>
+              </div>
+              <div class="timer-bar">
+                <div class="timer-progress" id="timerProgress"></div>
+              </div>
+            </div>
+            <div class="status-badge" id="statusBadge">BETTING</div>
+          </div>
+
+          <div class="race-track">
+            <div class="track-lane red-lane">
+              <div class="lane-label">
+                <span class="team-dot red"></span>
+                RED
+              </div>
+              <div class="track-path">
+                <div class="racer red-racer" id="redRacer">
+                  <div class="racer-body">🔴</div>
+                </div>
+                <div class="finish-line"></div>
+              </div>
+              <div class="ticket-count">
+                <span id="redTickets">0</span>
+                <span class="ticket-label">tickets</span>
+              </div>
+            </div>
+            
+            <div class="track-divider"></div>
+            
+            <div class="track-lane green-lane">
+              <div class="lane-label">
+                <span class="team-dot green"></span>
+                GREEN
+              </div>
+              <div class="track-path">
+                <div class="racer green-racer" id="greenRacer">
+                  <div class="racer-body">🟢</div>
+                </div>
+                <div class="finish-line"></div>
+              </div>
+              <div class="ticket-count">
+                <span id="greenTickets">0</span>
+                <span class="ticket-label">tickets</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Winner Announcement -->
+          <div class="winner-overlay" id="winnerOverlay">
+            <div class="winner-content">
+              <div class="winner-icon" id="winnerIcon">🏆</div>
+              <div class="winner-text" id="winnerText">RED WINS!</div>
+              <div class="winner-payout" id="winnerPayout"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+          <div class="history-header">
+            <h3>History</h3>
+            <div class="history-stats">
+              <span class="history-stat red-stat">
+                <span class="stat-dot red"></span>
+                <span id="historyRedWins">0</span>
+              </span>
+              <span class="history-stat green-stat">
+                <span class="stat-dot green"></span>
+                <span id="historyGreenWins">0</span>
+              </span>
+            </div>
+          </div>
+          <div class="history-list" id="historyList">
+            <div class="history-empty">
+              <span class="empty-icon">🏁</span>
+              <span>No races yet</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Betting Section -->
+      <div class="betting-section">
+        <div class="betting-header">
+          <h2>Place Your Bets</h2>
+          <div class="ticket-price">
+            <span class="price-label">Ticket:</span>
+            <span class="price-value" id="ticketPriceDisplay">1 USDT</span>
+          </div>
+        </div>
+
+        <div class="betting-grid">
+          <!-- Red Team Card -->
+          <div class="bet-card red-card">
+            <div class="card-header">
+              <span class="team-indicator red"></span>
+              <span class="team-name">Red Team</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat">
+                <span class="stat-value" id="redTotalTickets">0</span>
+                <span class="stat-label">Tickets</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="redPool">0</span>
+                <span class="stat-label">Pool</span>
+              </div>
+            </div>
+            <div class="ticket-input-group">
+              <button class="qty-btn minus" onclick="adjustTickets('red', -1)">−</button>
+              <input type="number" id="redTicketInput" class="ticket-input" value="0" min="0">
+              <button class="qty-btn plus" onclick="adjustTickets('red', 1)">+</button>
+            </div>
+            <div class="quick-amounts">
+              <button onclick="setTickets('red', 5)">5</button>
+              <button onclick="setTickets('red', 10)">10</button>
+              <button onclick="setTickets('red', 50)">50</button>
+              <button onclick="setTickets('red', 'max')">MAX</button>
+            </div>
+          </div>
+
+          <!-- Green Team Card -->
+          <div class="bet-card green-card">
+            <div class="card-header">
+              <span class="team-indicator green"></span>
+              <span class="team-name">Green Team</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat">
+                <span class="stat-value" id="greenTotalTickets">0</span>
+                <span class="stat-label">Tickets</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="greenPool">0</span>
+                <span class="stat-label">Pool</span>
+              </div>
+            </div>
+            <div class="ticket-input-group">
+              <button class="qty-btn minus" onclick="adjustTickets('green', -1)">−</button>
+              <input type="number" id="greenTicketInput" class="ticket-input" value="0" min="0">
+              <button class="qty-btn plus" onclick="adjustTickets('green', 1)">+</button>
+            </div>
+            <div class="quick-amounts">
+              <button onclick="setTickets('green', 5)">5</button>
+              <button onclick="setTickets('green', 10)">10</button>
+              <button onclick="setTickets('green', 50)">50</button>
+              <button onclick="setTickets('green', 'max')">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bet-summary">
+          <div class="summary-row">
+            <span>Red Tickets:</span>
+            <span id="summaryRed">0</span>
+          </div>
+          <div class="summary-row">
+            <span>Green Tickets:</span>
+            <span id="summaryGreen">0</span>
+          </div>
+          <div class="summary-row total">
+            <span>Total Cost:</span>
+            <span id="totalCost">0 USDT</span>
+          </div>
+        </div>
+
+        <button class="place-bet-btn" id="placeBetBtn" onclick="placeBet()">
+          <span class="btn-text">Place Bet</span>
+          <span class="btn-icon">🎰</span>
+        </button>
+        
+        <p class="login-prompt" id="loginPrompt">
+          <a href="#" onclick="openModal('signinModal')">Sign in</a> to place bets
+        </p>
+      </div>
+    </main>
+
+    <!-- Sign In Modal -->
+    <div class="modal-overlay" id="signinModal">
+      <div class="modal auth-modal">
+        <div class="modal-header">
+          <h3>Welcome Back</h3>
+          <button class="close-btn" onclick="closeModal('signinModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="signinForm" onsubmit="handleSignIn(event)">
+            <div class="form-group">
+              <label for="signinEmail">Email</label>
+              <input type="email" id="signinEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+              <label for="signinPassword">Password</label>
+              <input type="password" id="signinPassword" required placeholder="Enter your password">
+            </div>
+            <div class="form-footer">
+              <a href="#" onclick="openModal('forgotPasswordModal'); closeModal('signinModal');">Forgot password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="signinBtn">
+              Sign In
+            </button>
+          </form>
+          
+          <div class="auth-divider">
+            <span>or continue with</span>
+          </div>
+          
+          <div id="googleSignInBtn" class="google-btn-container"></div>
+          
+          <p class="auth-switch">
+            Don't have an account? <a href="#" onclick="openModal('signupModal'); closeModal('signinModal');">Sign up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div class="modal-overlay" id="signupModal">
+      <div class="modal auth-modal">
+        <div class="modal-header">
+          <h3>Create Account</h3>
+          <button class="close-btn" onclick="closeModal('signupModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="signupForm" onsubmit="handleSignUp(event)">
+            <div class="form-group">
+              <label for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+              <label for="signupUsername">Username</label>
+              <input type="text" id="signupUsername" required placeholder="Choose a username" 
+                     pattern="^[a-zA-Z0-9_]+$" minlength="3" maxlength="20">
+              <small>3-20 characters, letters, numbers, underscores</small>
+            </div>
+            <div class="form-group">
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" required placeholder="Create a password" minlength="8">
+              <small>Min 8 characters</small>
+            </div>
+            <div class="form-group">
+              <label for="signupConfirmPassword">Confirm Password</label>
+              <input type="password" id="signupConfirmPassword" required placeholder="Confirm your password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="signupBtn">
+              Create Account
+            </button>
+          </form>
+          
+          <div class="auth-divider">
+            <span>or continue with</span>
+          </div>
+          
+          <div id="googleSignUpBtn" class="google-btn-container"></div>
+          
+          <p class="auth-switch">
+            Already have an account? <a href="#" onclick="openModal('signinModal'); closeModal('signupModal');">Sign in</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgotPasswordModal">
+      <div class="modal auth-modal">
+        <div class="modal-header">
+          <h3>Reset Password</h3>
+          <button class="close-btn" onclick="closeModal('forgotPasswordModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-info">Enter your email and we'll send you a reset link.</p>
+          <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+            <div class="form-group">
+              <label for="forgotEmail">Email</label>
+              <input type="email" id="forgotEmail" required placeholder="Enter your email">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              Send Reset Link
+            </button>
+          </form>
+          <p class="auth-switch">
+            <a href="#" onclick="openModal('signinModal'); closeModal('forgotPasswordModal');">Back to Sign In</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet Modal -->
+    <div class="modal-overlay" id="depositModal">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3>💰 Wallet</h3>
+          <button class="close-btn" onclick="closeModal('depositModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="balance-display">
+            <span class="balance-label">Available Balance</span>
+            <span class="balance-amount"><span id="depositBalance">0</span> USDT</span>
+          </div>
+          
+          <!-- Wallet Tabs -->
+          <div class="wallet-tabs">
+            <button class="wallet-tab active" onclick="switchWalletTab('deposit')">Deposit</button>
+            <button class="wallet-tab" onclick="switchWalletTab('withdraw')">Withdraw</button>
+            <button class="wallet-tab" onclick="switchWalletTab('history')">History</button>
+          </div>
+          
+          <!-- Deposit Tab -->
+          <div class="wallet-tab-content" id="depositTab">
+            <div class="network-selector">
+              <label>Select Network</label>
+              <div class="network-buttons">
+                <button class="network-btn active" data-network="tron" onclick="selectNetwork('tron')">
+                  <span class="network-icon">🔴</span>
+                  <span class="network-name">TRON (TRC-20)</span>
+                  <span class="network-fee">Fee: 1 USDT</span>
+                </button>
+                <button class="network-btn" data-network="bsc" onclick="selectNetwork('bsc')">
+                  <span class="network-icon">🟡</span>
+                  <span class="network-name">BSC (BEP-20)</span>
+                  <span class="network-fee">Fee: 0.5 USDT</span>
+                </button>
+                <button class="network-btn" data-network="ethereum" onclick="selectNetwork('ethereum')">
+                  <span class="network-icon">🔵</span>
+                  <span class="network-name">Ethereum (ERC-20)</span>
+                  <span class="network-fee">Fee: 5 USDT</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="deposit-address-section" id="depositAddressSection">
+              <div class="loading-spinner" id="depositLoading">
+                <div class="spinner"></div>
+                <span>Loading address...</span>
+              </div>
+              <div class="deposit-address" id="depositAddressContent" style="display: none;">
+                <div class="qr-code" id="depositQRCode"></div>
+                <div class="address-info">
+                  <label>Deposit Address</label>
+                  <div class="address-copy">
+                    <input type="text" id="depositAddressInput" readonly>
+                    <button class="copy-btn" onclick="copyDepositAddress()">📋 Copy</button>
+                  </div>
+                  <p class="deposit-warning">
+                    ⚠️ Only send <strong>USDT</strong> to this address on the selected network. 
+                    Minimum deposit: <span id="minDepositAmount">10</span> USDT
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="pending-deposits" id="pendingDeposits" style="display: none;">
+              <h4>Pending Deposits</h4>
+              <div class="pending-list" id="pendingDepositsList"></div>
+            </div>
+          </div>
+          
+          <!-- Withdraw Tab -->
+          <div class="wallet-tab-content" id="withdrawTab" style="display: none;">
+            <div class="network-selector">
+              <label>Select Network</label>
+              <div class="network-buttons">
+                <button class="network-btn active" data-network="tron" onclick="selectWithdrawNetwork('tron')">
+                  <span class="network-icon">🔴</span>
+                  <span class="network-name">TRON (TRC-20)</span>
+                  <span class="network-fee">Fee: 1 USDT</span>
+                </button>
+                <button class="network-btn" data-network="bsc" onclick="selectWithdrawNetwork('bsc')">
+                  <span class="network-icon">🟡</span>
+                  <span class="network-name">BSC (BEP-20)</span>
+                  <span class="network-fee">Fee: 0.5 USDT</span>
+                </button>
+                <button class="network-btn" data-network="ethereum" onclick="selectWithdrawNetwork('ethereum')">
+                  <span class="network-icon">🔵</span>
+                  <span class="network-name">Ethereum (ERC-20)</span>
+                  <span class="network-fee">Fee: 5 USDT</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="withdraw-form">
+              <div class="form-group">
+                <label>Withdrawal Address</label>
+                <input type="text" id="withdrawAddress" placeholder="Enter your wallet address">
+              </div>
+              <div class="form-group">
+                <label>Amount (USDT)</label>
+                <div class="amount-input-group">
+                  <input type="number" id="withdrawAmount" placeholder="0.00" min="20" step="0.01">
+                  <button class="max-btn" onclick="setMaxWithdraw()">MAX</button>
+                </div>
+                <div class="amount-info">
+                  <span>Min: <span id="minWithdrawAmount">20</span> USDT</span>
+                  <span>Fee: <span id="withdrawFee">1</span> USDT</span>
+                  <span>You receive: <span id="withdrawReceive">0</span> USDT</span>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-block" onclick="requestWithdrawal()">
+                Request Withdrawal
+              </button>
+            </div>
+            
+            <div class="pending-withdrawals" id="pendingWithdrawals" style="display: none;">
+              <h4>Pending Withdrawals</h4>
+              <div class="pending-list" id="pendingWithdrawalsList"></div>
+            </div>
+          </div>
+          
+          <!-- History Tab -->
+          <div class="wallet-tab-content" id="historyTab" style="display: none;">
+            <div class="history-filter">
+              <select id="historyFilter" onchange="loadWalletHistory()">
+                <option value="all">All Transactions</option>
+                <option value="deposits">Deposits Only</option>
+                <option value="withdrawals">Withdrawals Only</option>
+              </select>
+            </div>
+            <div class="wallet-history-list" id="walletHistoryList">
+              <p class="empty-state">No transactions yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3>👤 Profile</h3>
+          <button class="close-btn" onclick="closeModal('profileModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-header">
+            <div class="profile-avatar" id="profileAvatar">U</div>
+            <div class="profile-info">
+              <h4 id="profileUsername">Username</h4>
+              <p id="profileEmail">email@example.com</p>
+              <span class="email-badge" id="emailVerifiedBadge">✓ Verified</span>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="statBalance">0</span>
+              <span class="stat-label">Balance (USDT)</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="statGames">0</span>
+              <span class="stat-label">Games Played</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="statWins">0</span>
+              <span class="stat-label">Wins</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="statProfit">0</span>
+              <span class="stat-label">Profit/Loss</span>
+            </div>
+          </div>
+          
+          <!-- Active Sessions Section -->
+          <div class="sessions-section">
+            <div class="section-header">
+              <h4>🔐 Active Sessions</h4>
+              <button class="btn btn-sm btn-danger" onclick="signOutAllSessions()">Sign Out All</button>
+            </div>
+            <div class="sessions-list" id="sessionsList">
+              <p class="empty-state">Loading sessions...</p>
+            </div>
+          </div>
+          
+          <!-- Account Actions -->
+          <div class="account-actions">
+            <button class="btn btn-secondary" onclick="openModal('changePasswordModal'); closeModal('profileModal');">
+              🔑 Change Password
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="changePasswordModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>🔑 Change Password</h3>
+          <button class="close-btn" onclick="closeModal('changePasswordModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <form onsubmit="changePassword(event)">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="currentPassword" required>
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword" required minlength="8">
+            </div>
+            <div class="form-group">
+              <label>Confirm New Password</label>
+              <input type="password" id="confirmNewPassword" required minlength="8">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Modal -->
+    <div class="modal-overlay" id="transactionsModal">
+      <div class="modal modal-large">
+        <div class="modal-header">
+          <h3>Transaction History</h3>
+          <button class="close-btn" onclick="closeModal('transactionsModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="transactions-list" id="transactionsList">
+            <p class="empty-state">Loading transactions...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
